@@ -23,20 +23,34 @@
 #include <linux/ioctl.h>
 #include <linux/types.h>
 
-#define DMA_BUF_EXPORTER_DEV_NAME "/dev/dma_buf_exporter"
+/* Character device node name */
+#define DMA_BUF_EXPORTER_DEV_NAME "dma_buf_exporter"
 
+/* Character device node full path */
+#define DMA_BUF_EXPORTER_DEV_PATH "/dev/dma_buf_exporter"
+
+/* dma_buf input/output parameters passed to IOCTL calls
+ * made by the application to allocate/free dma_buf
+ */
 struct dma_exporter_buf_alloc_data {
 	__u32 fd; /* dma_buf_fd */
 	__u64 size; /* size in bytes */
-	__u32 reserved0;
-	__u32 reserved1;
-	__u32 reserved2;
+	__u32 reserved [3];
 };
 
 #define DMA_BUF_EXPORTER_MAGIC		'D'
 
+/* IOCTL call to allocate dma_buf and return the fd to the application 
+ * This cal takes struct dma_exporter_buf_alloc_data as parameter with
+ * size being the input parameter fd is the output parameter.
+ */
 #define DMA_BUF_EXPORTER_ALLOC		_IOWR(DMA_BUF_EXPORTER_MAGIC, 0, \
 				      struct dma_exporter_buf_alloc_data)
+
+/* IOCTL call to free the dma_buf 
+ * This cal takes struct dma_exporter_buf_alloc_data as parameter with
+ * size and fd being the input parameters for this call.
+ */
 #define DMA_BUF_EXPORTER_FREE     _IOWR(DMA_BUF_EXPORTER_MAGIC, 8, \
 					struct dma_exporter_buf_alloc_data)
                     

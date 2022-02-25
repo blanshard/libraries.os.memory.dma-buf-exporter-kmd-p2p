@@ -18,6 +18,7 @@ dma_buf_exporter_kmd.ko:
 build: dma_buf_exporter_kmd.ko
 
 install: build
+	mkdir -p /lib/modules/$(shell uname -r)/kernel/drivers/dma_buf_exporter_kmd/
 	cp $(MODULE_NAME).ko /lib/modules/$(shell uname -r)/kernel/drivers/dma_buf_exporter_kmd/
 	depmod
 
