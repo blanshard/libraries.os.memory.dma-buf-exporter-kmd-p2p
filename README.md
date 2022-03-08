@@ -4,7 +4,7 @@
 
  * Creates a new character device /dev/dma_buf_exporter
  * Provides IOCTL interfaces DMA_BUF_EXPORTER_ALLOC and DMA_BUF_EXPORTER_FREE to allocate and free dma_buf
- * Exports interfaces to map and unmap dma_buf in kernel mode
+ * Exports interfaces to attach, detach, map and unmap dma_buf in kernel mode
 
 ## Prerequisites
 
