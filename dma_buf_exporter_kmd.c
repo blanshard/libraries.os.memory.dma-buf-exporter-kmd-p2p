@@ -32,24 +32,55 @@ MODULE_IMPORT_NS(DMA_BUF);
 #define DRIVER_AUTHOR   "Intel Corporation"
 #define DRIVER_DESC     "DMA Buffer Exporter Driver"
 
+struct dma_buf_exporter_data {
+	int num_pages;
+	struct page *pages[];
+};
+
 static struct dma_buf *dma_buf_exporter_alloc(size_t size);
 static void dma_buf_exporter_free(struct dma_buf *dma_buf);
 
-
 static int dma_buf_exporter_attach(struct dma_buf *dmabuf, struct dma_buf_attachment *attachment)
 {
+	pr_info("dma_buf_exporter: allattaching  dma_buf \n");
 	return 0;
 }
 
 static void dma_buf_exporter_detach(struct dma_buf *dmabuf, struct dma_buf_attachment *attachment)
 {
+	pr_info("dma_buf_exporter: detaching  dma_buf \n");
 	return;
 }
 
 static struct sg_table *dma_buf_exporter_map_dma_buf(struct dma_buf_attachment *attachment,
 					 enum dma_data_direction dir)
 {
-	struct sg_table *table = NULL;
+	struct dma_buf_exporter_data *data = attachment->dmabuf->priv;
+	struct sg_table *table;
+	struct scatterlist *sg;
+	int i;
+
+	pr_info("dma_buf_exporter: mapping dma_buf \n");
+	table = kmalloc(sizeof(*table), GFP_KERNEL);
+	if (!table)
+		return ERR_PTR(-ENOMEM);
+
+	if (sg_alloc_table(table, data->num_pages, GFP_KERNEL)) {
+		kfree(table);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	sg = table->sgl;
+	for (i = 0; i < data->num_pages; i++) {
+		sg_set_page(sg, data->pages[i], PAGE_SIZE, 0);
+		sg = sg_next(sg);
+	}
+
+	if (!dma_map_sg(NULL, table->sgl, table->nents, dir)) {
+		sg_free_table(table);
+		kfree(table);
+		return ERR_PTR(-ENOMEM);
+	}
 
 	return table;
 }
@@ -58,6 +89,10 @@ static void dma_buf_exporter_unmap_dma_buf(struct dma_buf_attachment *attachment
 			       struct sg_table *table,
 			       enum dma_data_direction dir)
 {
+	pr_info("dma_buf_exporter: unmapping dma_buf \n");
+	dma_unmap_sg(NULL, table->sgl, table->nents, dir);
+	sg_free_table(table);
+	kfree(table);
 	return;
 }
 
@@ -68,11 +103,6 @@ static const struct dma_buf_ops dma_buf_exporter_ops = {
 	.unmap_dma_buf = dma_buf_exporter_unmap_dma_buf,
 };
 
-struct dma_buf_exporter_data {
-	int num_pages;
-	struct page *pages[];
-};
-
 static struct dma_buf *dma_buf_exporter_alloc(size_t size)
 {
 	DEFINE_DMA_BUF_EXPORT_INFO(dma_buf_exporter_info);
@@ -80,6 +110,7 @@ static struct dma_buf *dma_buf_exporter_alloc(size_t size)
 	struct dma_buf_exporter_data *data;
 	int i, npages;
 
+	pr_info("dma_buf_exporter: allocating dma_buf \n");
 	npages = PAGE_ALIGN(size) / PAGE_SIZE;
 	if (!npages)
 		return ERR_PTR(-EINVAL);
@@ -119,6 +150,7 @@ static void dma_buf_exporter_free(struct dma_buf *dma_buf)
 	struct dma_buf_exporter_data *data = dma_buf->priv;
 	int i;
 
+	pr_info("dma_buf_exporter: freeing dma_buf \n");
 	for (i = 0; i < data->num_pages; i++)
 		put_page(data->pages[i]);
 
@@ -130,6 +162,7 @@ static long dma_buf_exporter_ioctl(struct file *filp, unsigned int cmd, unsigned
 	struct dma_exporter_buf_alloc_data data;
 	struct dma_buf *dma_buf;
 
+	pr_info("dma_buf_exporter: dma_buf_exporter_ioctl %u \n", cmd);
 	if (copy_from_user(&data, (void __user *)arg, sizeof(data))) {
 		pr_info("dma_buf_exporter: failed to copy user data. ");
 		return -EFAULT;
@@ -141,7 +174,7 @@ static long dma_buf_exporter_ioctl(struct file *filp, unsigned int cmd, unsigned
 			pr_info("dma_buf_exporter: allocating dma_buf of size %llu ", data.size);
 			dma_buf = dma_buf_exporter_alloc(data.size);
 			if (!dma_buf) {
-				pr_err("error: exporter alloc page failed\n");
+				pr_err("dma_buf_exporter: ERROR exporter alloc page failed\n");
 				return -ENOMEM;
 			}
 			
@@ -178,7 +211,7 @@ static struct file_operations dma_buf_exporter_fops = {
 	.owner   = THIS_MODULE,
 	.unlocked_ioctl   = dma_buf_exporter_ioctl,
 };
- 
+
 static struct miscdevice dma_buf_exporter_dev = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = DMA_BUF_EXPORTER_DEV_NAME,
@@ -187,13 +220,13 @@ static struct miscdevice dma_buf_exporter_dev = {
  
 static int __init dma_buf_exporter_init(void)
 {
-	pr_info("Loading dma_buf_exporter_kmd ...");
+	pr_info("dma_buf_exporter: Loading dma_buf_exporter_kmd ...");
 	return misc_register(&dma_buf_exporter_dev);
 }
 
 static void __exit dma_buf_exporter_exit(void)
 {
-	pr_info("Unloading dma_buf_exporter_kmd ...");
+	pr_info("dma_buf_exporter: Unloading dma_buf_exporter_kmd ...");
 	misc_deregister(&dma_buf_exporter_dev);
 }
 
