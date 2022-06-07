@@ -96,11 +96,18 @@ static void dma_buf_exporter_unmap_dma_buf(struct dma_buf_attachment *attachment
 	return;
 }
 
+static void dma_buf_exporter_release_dma_buf(struct dma_buf *dma_buf)
+{
+	pr_info("dma_buf_exporter: releasing dma_buf \n");
+	return;
+}
+
 static const struct dma_buf_ops dma_buf_exporter_ops = {
 	.attach = dma_buf_exporter_attach,
 	.detach = dma_buf_exporter_detach,
 	.map_dma_buf = dma_buf_exporter_map_dma_buf,
 	.unmap_dma_buf = dma_buf_exporter_unmap_dma_buf,
+	.release = dma_buf_exporter_release_dma_buf,
 };
 
 static struct dma_buf *dma_buf_exporter_alloc(size_t size)
@@ -112,33 +119,62 @@ static struct dma_buf *dma_buf_exporter_alloc(size_t size)
 
 	pr_info("dma_buf_exporter: allocating dma_buf \n");
 	npages = PAGE_ALIGN(size) / PAGE_SIZE;
-	if (!npages)
+	if (!npages) {
+		printk("Invalid npages ... \n");
 		return ERR_PTR(-EINVAL);
+	}
+		
 
+	printk("allocating private data ... npages = %d \n", npages);
 	data = kmalloc(sizeof(*data) + npages * sizeof(struct page *),
 		       GFP_KERNEL);
-	if (!data)
+	if (!data) {
+		printk("Failed to allocate private data \n");
 		return ERR_PTR(-ENOMEM);
+	}
 
 	for (i = 0; i < npages; i++) {
 		data->pages[i] = alloc_page(GFP_KERNEL);
-		if (!data->pages[i])
+		if (!data->pages[i]){
+			printk("Unable to allocate page ...\n");
 			goto err;
+		}
+			
 	}
 	data->num_pages = npages;
-
+#if 0
+struct dma_buf_export_info {
+  const char * exp_name;
+  struct module * owner;
+  const struct dma_buf_ops * ops;
+  size_t size;
+  int flags;
+  struct reservation_object * resv;
+  void * priv;
+};
+#endif
+	dma_buf_exporter_info.exp_name = KBUILD_MODNAME;
+	dma_buf_exporter_info.owner = THIS_MODULE;
 	dma_buf_exporter_info.ops = &dma_buf_exporter_ops;
 	dma_buf_exporter_info.size = npages * PAGE_SIZE;
 	dma_buf_exporter_info.flags = O_CLOEXEC;
+	dma_buf_exporter_info.resv = NULL;
 	dma_buf_exporter_info.priv = data;
 
+	printk("Exporting dma_buf ... Exporting dma_buf ... \n");
 	dma_buf = dma_buf_export(&dma_buf_exporter_info);
-	if (IS_ERR(dma_buf))
+	
+	if (IS_ERR(dma_buf)) {
+		printk("Failed to export dma_buf ... \n");
 		goto err;
-
+	}
+		
+	printk("dma_buf export completed ... \n");
 	return dma_buf;
 
 err:
+	printk("Error handling path ... \n");
+	i = data->num_pages;
 	while (i--)
 		put_page(data->pages[i]);
 	kfree(data);
