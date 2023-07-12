@@ -1,4 +1,8 @@
 MODULE_NAME := dma_buf_exporter_kmd_intel
+
+CONFIG_MODULE_SIG=n
+CONFIG_MODULE_SIG_ALL=n
+
 obj-m += $(MODULE_NAME).o
 $(MODULE_NAME)-y := dma_buf_exporter_kmd.o
 

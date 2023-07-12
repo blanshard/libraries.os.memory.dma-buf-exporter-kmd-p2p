@@ -242,10 +242,29 @@ static long dma_buf_exporter_ioctl(struct file *filp, unsigned int cmd, unsigned
 
 	return 0;
 }
+
+/* This is called whenever a process attempts to open the device file */ 
+static int dma_buf_open(struct inode *inode, struct file *file)
+{
+	pr_info("dma_buf_exporter: dma_buf device open (%p) \n", file);
+
+	__module_get(THIS_MODULE);
+	return 0;
+}
+
+static int dma_buf_release(struct inode *inode, struct file *file) 
+{ 
+    pr_info("dma_buf_exporter(%p,%p)\n", inode, file); 
  
+    module_put(THIS_MODULE); 
+    return 0; 
+} 
+
 static struct file_operations dma_buf_exporter_fops = {
-	.owner   = THIS_MODULE,
-	.unlocked_ioctl   = dma_buf_exporter_ioctl,
+	.owner   		= THIS_MODULE,
+	.open    		= dma_buf_open,
+	.unlocked_ioctl = dma_buf_exporter_ioctl,
+	.release 		= dma_buf_release, /* a.k.a. close */ 
 };
 
 static struct miscdevice dma_buf_exporter_dev = {
