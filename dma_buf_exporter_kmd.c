@@ -90,7 +90,7 @@ static void dma_buf_exporter_unmap_dma_buf(struct dma_buf_attachment *attachment
 			       enum dma_data_direction dir)
 {
 	pr_info("dma_buf_exporter: unmapping dma_buf \n");
-	dma_unmap_sg(NULL, table->sgl, table->nents, dir);
+	dma_unmap_sg(attachment->dev, table->sgl, table->nents, dir);
 	sg_free_table(table);
 	kfree(table);
 	return;
