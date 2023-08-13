@@ -76,7 +76,7 @@ static struct sg_table *dma_buf_exporter_map_dma_buf(struct dma_buf_attachment *
 		sg = sg_next(sg);
 	}
 
-	if (!dma_map_sg(NULL, table->sgl, table->nents, dir)) {
+	if (!dma_map_sg(attachment->dev, table->sgl, table->nents, dir)) {
 		sg_free_table(table);
 		kfree(table);
 		return ERR_PTR(-ENOMEM);
